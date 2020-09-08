@@ -33,22 +33,78 @@
             <i class="el-icon-caret-bottom"></i>
           </span>
           <el-dropdown-menu slot="dropdown">
+            <el-dropdown-item divided command="modifyPassword">修改密码</el-dropdown-item>
             <el-dropdown-item divided command="loginout">退出登录</el-dropdown-item>
           </el-dropdown-menu>
         </el-dropdown>
       </div>
     </div>
+    <!-- 修改密码 -->
+    <el-dialog title="修改密码" :visible.sync="modifyPasswordFlag" destroy-on-close @close="modifyClose" >
+      <el-form :model="passwordForm" :rules="rules" :label-width="formLabelWidth">
+        <el-form-item label="原密码" prop="used">
+          <el-input type="password" v-model="passwordForm.used" autocomplete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="新密码" prop="new">
+          <el-input type="password" v-model="passwordForm.new" autocomplete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="确认密码" prop="again">
+          <el-input type="password" v-model="passwordForm.again" autocomplete="off"></el-input>
+        </el-form-item>
+      </el-form>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="modifyPasswordFlag = false">取 消</el-button>
+        <el-button type="primary" @click="modifyPasswordFlag = false">确 定</el-button>
+      </div>
+    </el-dialog>
   </div>
 </template>
 <script>
 import bus from "../common/bus";
 export default {
   data() {
+    var validatePass = (rule, value, callback) => {
+      if (value === "") {
+        callback(new Error("请输入密码"));
+      } else {
+        if (this.passwordForm.new !== "") {
+          // this.$refs.passwordForm.validateField("new");
+        }
+        callback();
+      }
+    };
+    var validatePass2 = (rule, value, callback) => {
+      if (value === "") {
+        callback(new Error("请再次输入密码"));
+      } else if (value !== this.passwordForm.new) {
+        callback(new Error("两次输入密码不一致!"));
+      } else {
+        callback();
+      }
+    };
     return {
       collapse: false,
       fullscreen: false,
       name: "linxin",
       message: 2,
+      modifyPasswordFlag: false,
+      passwordForm: {
+        used: null,
+        new: null,
+        again: null,
+      },
+      rules: {
+          new: [
+            { required: true, validator: validatePass, trigger: 'blur' }
+          ],
+          again: [
+            { required: true, validator: validatePass2, trigger: 'blur' }
+          ],
+          used: [
+            { required: true, message: '请填写原密码', trigger: 'blur' }
+          ],
+        },
+      formLabelWidth: "120px",
     };
   },
   computed: {
@@ -65,6 +121,8 @@ export default {
         this.$store.commit("SET_USERINFO", null);
         this.$store.commit("SET_TOKEN", null);
         this.$router.push("/login");
+      } else if (command == "modifyPassword") {
+        this.modifyPasswordFlag = true;
       }
     },
     // 侧边栏折叠
@@ -72,6 +130,11 @@ export default {
       this.collapse = !this.collapse;
       bus.$emit("collapse", this.collapse);
     },
+    modifyClose() {
+    this.passwordForm.new = null
+    this.passwordForm.again = null
+    this.passwordForm.used = null
+  },
     // 全屏事件
     handleFullScreen() {
       let element = document.documentElement;
@@ -100,6 +163,7 @@ export default {
       this.fullscreen = !this.fullscreen;
     },
   },
+  
   mounted() {
     if (document.body.clientWidth < 1500) {
       this.collapseChage();
