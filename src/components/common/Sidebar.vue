@@ -33,6 +33,7 @@
 
 <script>
     import bus from '../common/bus';
+    // import {getRule} from '../../network/api'
     export default {
         data() {
             return {
@@ -70,7 +71,15 @@
                 return this.$route.path.replace('/','');
             }
         },
+        methods: {
+            // getRule() {
+            //     getRule({page: 1, size: 100000}).then(res => {
+            //         console.log(res);
+            //     })
+            // },
+        },
         created(){
+            // this.getRule() // 获取侧边栏
             // 通过 Event Bus 进行组件间通信，来折叠侧边栏
             bus.$on('collapse', msg => {
                 this.collapse = msg;

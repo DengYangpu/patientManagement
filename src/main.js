@@ -3,6 +3,10 @@ import App from './App.vue'
 import router from './router'
 import axios from 'axios';
 import ElementUI from 'element-ui';
+import 'font-awesome/scss/font-awesome.scss'
+import iconPicker from 'e-icon-picker';
+import 'e-icon-picker/dist/index.css';//基础样式
+import 'e-icon-picker/dist/main.css'; //fontAwesome 图标库样式
 import VueI18n from 'vue-i18n';
 import store from './store'
 import { messages } from './components/common/i18n';
@@ -17,6 +21,8 @@ Vue.use(VueI18n);
 Vue.use(ElementUI, {
     size: 'small'
 });
+Vue.use(iconPicker);
+
 Vue.prototype.$axios = axios;
 
 const i18n = new VueI18n({

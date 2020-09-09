@@ -36,14 +36,14 @@ const service = axios.create({
 service.interceptors.request.use(config => {
   //发请求前做的一些处理，数据转化，配置请求头，设置token,设置loading等，根据需求去添加
   if (config.url != 'login/account') {
-    config.data.token = store.state.token
+    config.data.sessionToken = store.state.token
   }
   // console.log(store.state.token);
 
   config.data.timestamp = Date.parse(new Date());
   config.data.version = '1.0.1';
   config.data.sign = signature(config.data);
-   config.data = Qs.stringify(config.data); //数据转化,也可以使用qs转换
+  config.data = Qs.stringify(config.data); //数据转化,也可以使用qs转换
   // //  config.headers = {
   // //    'Content-Type':'application/x-www-form-urlencoded' //配置请求头
   // //  }
@@ -74,6 +74,7 @@ service.interceptors.response.use(response => {
   // return response
 }, error => {
    /***** 接收到异常响应的处理开始 *****/
+   console.log(error);
   if (error && error.response) {
     // 1.公共错误处理
     // 2.根据响应码具体处理

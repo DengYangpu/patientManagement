@@ -41,7 +41,7 @@
     </div>
     <!-- 修改密码 -->
     <el-dialog title="修改密码" :visible.sync="modifyPasswordFlag" destroy-on-close @close="modifyClose" >
-      <el-form :model="passwordForm" :rules="rules" :label-width="formLabelWidth">
+      <el-form :model="passwordForm" ref="passwordForm" :rules="rules" :label-width="formLabelWidth">
         <el-form-item label="原密码" prop="used">
           <el-input type="password" v-model="passwordForm.used" autocomplete="off"></el-input>
         </el-form-item>
@@ -64,7 +64,8 @@ import bus from "../common/bus";
 export default {
   data() {
     var validatePass = (rule, value, callback) => {
-      if (value === "") {
+      console.log(value);
+      if (value == null) {
         callback(new Error("请输入密码"));
       } else {
         if (this.passwordForm.new !== "") {
@@ -74,7 +75,7 @@ export default {
       }
     };
     var validatePass2 = (rule, value, callback) => {
-      if (value === "") {
+      if (value == null) {
         callback(new Error("请再次输入密码"));
       } else if (value !== this.passwordForm.new) {
         callback(new Error("两次输入密码不一致!"));
