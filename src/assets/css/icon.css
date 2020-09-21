@@ -2,3 +2,8 @@
     [class*=" el-icon-lx"], [class^=el-icon-lx] {
         font-family: lx-iconfont!important;
     }
+
+    .fa {
+        margin-right: 5px;
+    width: 24px;
+    }

@@ -69,7 +69,13 @@ export default {
               this.$store.commit("SET_USERINFO", res.value);
               this.$store.commit("SET_TOKEN", res.value.sessionToken);
               this.$message.success('登陆成功')
-              this.$router.push("/");
+              if (this.$router.history.current.query.redirect) {
+                this.$router.push({path:decodeURIComponent(this.$router.history.current.query.redirect)});
+              }else {
+                this.$router.push('/')
+              }
+             
+              
             }
             }
           });

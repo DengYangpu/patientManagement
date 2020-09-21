@@ -55,6 +55,13 @@ export default new Router({
           meta: {
             title: '角色组管理'
           }
+        },
+        {
+          path: '/manage',
+          component: resolve => require(['../components/page/hospital/Manage.vue'],resolve),
+          meta: {
+            title: '医院管理'
+          }
         }
       ]
     },

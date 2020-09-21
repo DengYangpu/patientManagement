@@ -1,11 +1,11 @@
-import axios from 'axios'
+import axios from 'axios';
 import {
   signature,
   zipUtf16
 } from './sign' // 引入md5签名文件
 import store from '../store/index';
-import Qs from 'qs'
-// import Vue from 'vue'
+import Qs from 'qs';
+import router from '../router';
 //以下是新加
 import {
   Message
@@ -36,13 +36,14 @@ const service = axios.create({
 service.interceptors.request.use(config => {
   //发请求前做的一些处理，数据转化，配置请求头，设置token,设置loading等，根据需求去添加
   if (config.url != 'login/account') {
-    config.data.sessionToken = store.state.token
+      config.data.sessionToken = store.state.token
   }
-  // console.log(store.state.token);
 
   config.data.timestamp = Date.parse(new Date());
   config.data.version = '1.0.1';
   config.data.sign = signature(config.data);
+  // console.log(config);
+
   config.data = Qs.stringify(config.data); //数据转化,也可以使用qs转换
   // //  config.headers = {
   // //    'Content-Type':'application/x-www-form-urlencoded' //配置请求头
@@ -64,9 +65,18 @@ service.interceptors.request.use(config => {
 service.interceptors.response.use(response => {
   //接收到响应数据并成功后的一些共有的处理，关闭loading等
   // console.log(response);
-  if (response.data.code || 1 > 1000) {
-    Message.error(response.data.message);
-    return response;
+  if (response.data.code || 1 > 1000) { 
+    if (response.data.code == 2013) {
+      Message.error(response.data.message);
+      router.replace({
+        path:"/login",
+        query: {redirect: router.currentRoute.fullPath}
+      })
+      return response
+    }else {
+      Message.error(response.data.message);
+      return response;
+    }
   } else {
     const res = zipUtf16(response.data)
     return res;
@@ -74,7 +84,6 @@ service.interceptors.response.use(response => {
   // return response
 }, error => {
    /***** 接收到异常响应的处理开始 *****/
-   console.log(error);
   if (error && error.response) {
     // 1.公共错误处理
     // 2.根据响应码具体处理

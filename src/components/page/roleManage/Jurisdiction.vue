@@ -3,10 +3,10 @@
     <!-- 搜索筛选 -->
     <el-form :inline="true" class="user-search">
       <el-form-item label="搜索：">
-        <el-input size="small" placeholder="输入角色名称"></el-input>
+        <el-input size="small" disabled placeholder="输入角色名称"></el-input>
       </el-form-item>
       <el-form-item>
-        <el-button size="small" type="primary" icon="el-icon-search">搜索</el-button>
+        <el-button size="small" disabled type="primary" icon="el-icon-search">搜索</el-button>
         <el-button size="small" type="primary" icon="el-icon-plus" @click="handleEdit">添加</el-button>
       </el-form-item>
     </el-form>
@@ -17,10 +17,11 @@
       row-key="id"
       border
       highlight-current-row
-      :tree-props="{children: 'child', hasChildren: 'hasChild'}"
+      :tree-props="{children: 'child', hasChildren: 'hasChild'}"  
     >
-      <el-table-column prop="id" label="id" width="120"></el-table-column>
+      <el-table-column prop="id" label="ID" width="120"></el-table-column>
       <el-table-column prop="title" label="权限名称" width="180"></el-table-column>
+      <el-table-column prop="index" label="页面路由" width="180"></el-table-column>
       <el-table-column prop="icon" label="权限图标" width="150" align="center">
         <template slot-scope="scope">
           <i :class="scope.row.icon"></i>
@@ -36,7 +37,7 @@
           >{{scope.row.isMenu ? '是' : '否'}}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="status" label="权限状态" align="center" width="100">
+      <el-table-column prop="status" label="权限状态" align="center" width="100"> 
         <template slot-scope="scope">
           <el-tag
             :type="scope.row.status ? 'primary' : 'danger'"
@@ -61,6 +62,9 @@
         </el-form-item>
         <el-form-item label="规则(路由)" prop="name" :label-width="formLabelWidth">
           <el-input v-model="form.name" autocomplete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="跳转(路由)" prop="index" :label-width="formLabelWidth">
+          <el-input v-model="form.index" autocomplete="off"></el-input>
         </el-form-item>
         <el-form-item label="图标" prop="icon" :label-width="formLabelWidth">
           <e-icon-picker v-model="form.icon" />
@@ -95,58 +99,15 @@ export default {
   components: {},
   data() {
     return {
-      tableData: [
-        {
-          id: 1,
-          date: "2016-05-02",
-          name: "王小虎",
-          status: false,
-        },
-        {
-          id: 2,
-          date: "2016-05-04",
-          name: "王小虎",
-          status: true,
-        },
-        {
-          id: 3,
-          date: "2016-05-01",
-          name: "王小虎",
-          status: true,
-          children: [
-            {
-              id: 31,
-              date: "2016-05-01",
-              name: "王小虎",
-              status: false,
-            },
-            {
-              id: 32,
-              date: "2016-05-01",
-              name: "王小虎",
-              status: true,
-              children: [
-                {
-                  id: 33,
-                  date: "2016-05-01",
-                  name: "王小虎",
-                  status: true,
-                },
-              ],
-            },
-          ],
-        },
-        {
-          id: 4,
-          date: "2016-05-03",
-          name: "王小虎",
-          status: 1,
-        },
-      ],
+      tableData: [],
       rules: {
         title: [
           { required: true, message: "请输入权限名称", trigger: "blur" },
           { max: 20, message: "长度 20 个字符", trigger: "blur" },
+        ],
+        index: [
+          { required: true, message: "请输入权限路由", trigger: "blur" },
+          { max: 100, message: "长度 100 个字符", trigger: "blur" },
         ],
         status: [{ required: true, message: "请选择状态", trigger: "change" }],
         isMenu: [{ required: true, message: "请选择状态", trigger: "change" }],
@@ -163,6 +124,7 @@ export default {
         remark: null,
         pid: 0,
         id: null,
+        index: null
       },
       title: "添加",
     };
@@ -177,6 +139,8 @@ export default {
       getRule({ page: 1, size: 1000, userId: id }).then((res) => {
         if (res.code == 1) {
           this.tableData = res.value;
+          // 把数据存入vuex
+          this.$store.commit("SET_RULE", res.value);
         } else {
           this.$message.error(res.message);
         }
@@ -188,7 +152,6 @@ export default {
         opt.push(val.id);
         if (val.children) {
           val.children.forEach((el) => {
-            console.log(val.id);
             if (el.selectchecked.length) {
               opt.push(el.id);
               opt.push(el.selectchecked);
@@ -196,14 +159,12 @@ export default {
           });
         }
       });
-      console.log(data);
       opt = opt
         .join()
         .split(",")
         .filter((n) => {
           return n;
         });
-      console.log(opt);
     },
     /**
       编辑 and 添加
@@ -220,6 +181,7 @@ export default {
         this.form.isMenu = row.isMenu;
         this.form.pid = row.pid;
         this.form.id = row.id;
+        this.form.index = row.index;
       } else {
         this.title = "添加";
         this.form.name = "";
@@ -229,6 +191,7 @@ export default {
         this.form.remark = "";
         this.form.isMenu = 1;
         this.form.pid = 0;
+        this.form.index = '';
       }
     },
     /**
@@ -280,7 +243,6 @@ export default {
               this.form.isMenu = 1;
             }
             editRule(this.form).then((res) => {
-              console.log(res);
               if (res.code == 1) {
                 this.getRule();
                 this.$message({
@@ -354,6 +316,7 @@ export default {
       this.form.remark = "";
       this.form.isMenu = 0;
       this.form.pid = row.id;
+      this.form.index = '';
     },
 
     /**

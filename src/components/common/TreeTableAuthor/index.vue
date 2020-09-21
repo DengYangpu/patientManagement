@@ -7,6 +7,7 @@
       node-key="id"
       ref="tree"
       accordion
+      :props="props"
       :render-content="renderContent"
       @check-change="handleCheckChange"
       :check-strictly="checkFlg"
@@ -19,7 +20,7 @@ export default {
   name: "treeTable",
   data() {
     return {
-      checkFlg: false,
+      checkFlg: true,
     };
   },
   props: {
@@ -30,6 +31,9 @@ export default {
     defaultAuth: {
       type: Array,
     },
+    props: {
+      type: Object
+    }
   },
   mounted() {
     // console.log(this.defaultAuth);
@@ -58,7 +62,6 @@ export default {
       let menuArr = this.unique(arr); // 去除重复的节点
       // console.log(menuArr);
       // this.permissionIds = menuArr.join(",");
-      console.log(menuArr);
       this.$emit('getMenuArr', menuArr)
     },
     // 数组去重

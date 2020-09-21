@@ -12,7 +12,8 @@ Vue.use(Vuex)
 const state = sessionStorage.getItem('state') ? JSON.parse(sessionStorage.getItem('state')):{
   version: config.version ,
   userInfo: null,
-  token: null
+  token: null,
+  rule: null,
 }
 
 const store = new Vuex.Store({

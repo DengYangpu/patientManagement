@@ -1,4 +1,4 @@
-import {SET_USERINFO, SET_TOKEN} from './mutations-types'
+import {SET_USERINFO, SET_TOKEN, SET_RULE} from './mutations-types'
 
 export default {
   [SET_USERINFO](state,userInfo){
@@ -6,5 +6,8 @@ export default {
   },
   [SET_TOKEN](state, token) {
     state.token= token;
-  }
+  },
+  [SET_RULE](state, rule) {
+    state.rule= rule;
+  },
 }

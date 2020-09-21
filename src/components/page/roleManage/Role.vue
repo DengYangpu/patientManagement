@@ -3,21 +3,18 @@
     <!-- 搜索筛选 -->
     <el-form :inline="true" :model="formInline" class="user-search">
       <el-form-item label="搜索：">
-        <el-input size="small" v-model="formInline.roleName" placeholder="输入角色名称"></el-input>
-      </el-form-item>
-      <el-form-item label>
-        <el-input size="small" v-model="formInline.roleNo" placeholder="输入角色代码"></el-input>
+        <el-input size="small" v-model="formInline.text" @change="search" placeholder="输入角色名称"></el-input>
       </el-form-item>
       <el-form-item>
         <el-button size="small" type="primary" icon="el-icon-search" @click="search">搜索</el-button>
         <el-button size="small" type="primary" icon="el-icon-plus" @click="handleEdit()">添加</el-button>
-        <el-button
+        <!-- <el-button
           size="small"
           type="danger"
           icon="el-icon-delete-solid"
           @click="handleDel()"
           :disabled="delFlag"
-        >批量删除</el-button>
+        >批量删除</el-button>-->
       </el-form-item>
     </el-form>
     <!--列表-->
@@ -29,14 +26,17 @@
       border
       element-loading-text="拼命加载中"
       style="width: 100%;"
-      @selection-change="changemenu"
     >
-      <el-table-column align="center" type="selection" width="60"></el-table-column>
-      <el-table-column sortable prop="roleNo" label="编码"></el-table-column>
-      <el-table-column sortable prop="roleName" label="名称"></el-table-column>
-      <el-table-column sortable prop="editTime" label="最后修改时间"></el-table-column>
-      <el-table-column sortable prop="editUser" label="修改人"></el-table-column>
-      <el-table-column sortable prop="status" label="状态">
+      <!-- <el-table-column align="center" type="selection" width="60"></el-table-column> -->
+      <el-table-column prop="id" label="登录账号"></el-table-column>
+      <el-table-column prop="username" label="名称"></el-table-column>
+      <el-table-column prop="loginAt" label="最后登陆时间">
+        <template slot-scope="scope">{{scope.row.loginAt | dateformat('YYYY-MM-DD HH:mm:ss')}}</template>
+      </el-table-column>
+      <el-table-column prop="hospitalId" label="所在医院">
+        <template slot-scope="scope">{{hospital(scope.row.hospitalId)}}</template>
+      </el-table-column>
+      <el-table-column prop="status" label="状态">
         <template slot-scope="scope">
           <el-tag
             :type="scope.row.status | status"
@@ -48,7 +48,7 @@
         <template slot-scope="scope">
           <el-button size="mini" @click="handleEdit(scope.$index, scope.row)">编辑</el-button>
           <el-button size="mini" type="danger" @click="deleteUser(scope.$index, scope.row)">删除</el-button>
-          <el-button size="mini" type="success" @click="menuAccess(scope.$index, scope.row)">菜单权限</el-button>
+          <!-- <el-button size="mini" type="success" @click="menuAccess(scope.$index, scope.row)">菜单权限</el-button> -->
         </template>
       </el-table-column>
     </el-table>
@@ -71,32 +71,51 @@
       @close="closeDialog('edit')"
     >
       <el-form label-width="120px" :model="editForm" ref="editForm" :rules="rules">
-        <el-form-item label="编码" prop="systemNo">
+        <el-form-item label="名称" prop="username">
           <el-input
             size="small"
-            v-model="editForm.systemNo"
-            auto-complete="off"
-            placeholder="请输入编码"
-          ></el-input>
-        </el-form-item>
-        <el-form-item label="名称" prop="roleName">
-          <el-input
-            size="small"
-            v-model="editForm.roleName"
+            v-model="editForm.username"
             auto-complete="off"
             placeholder="请输入名称"
           ></el-input>
         </el-form-item>
-        <el-form-item label="密码" prop="roleNo">
-          <el-input size="small" v-model="editForm.roleNo" auto-complete="off" placeholder="请输入密码"></el-input>
+        <el-form-item label="密码" prop="password">
+          <el-input
+            size="small"
+            v-model="editForm.password"
+            auto-complete="off"
+            :placeholder="passwordText"
+          ></el-input>
         </el-form-item>
-        <el-form-item label="所属医院" prop="hospital">
-          <tree-table
-            :data="hospital"
-            :defaultAuth="editForm.hospital"
-            @getMenuArr="getHospitalMenuArr"
-            border
-          ></tree-table>
+        <el-form-item label="电话" prop="mobile">
+          <el-input
+            size="small"
+            v-model.number="editForm.mobile"
+            auto-complete="off"
+            placeholder="请输入手机号"
+          ></el-input>
+        </el-form-item>
+        <el-form-item label="所属医院" prop="hospitalId">
+          <el-select v-model="editForm.hospitalId" placeholder="请选择医院">
+            <el-option
+              v-for="item in hospitalList"
+              :key="item.value"
+              :label="item.title"
+              :value="item.id"
+            ></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="分配角色" prop="groupId">
+          <el-tree
+            :props="RoleRightProps"
+            :data="groupList"
+            ref="tree"
+            @check-change="getHospitalMenuArr"
+            show-checkbox
+            :check-strictly="true"
+            :default-checked-keys="defaultEdit"
+            node-key="id"
+          ></el-tree>
         </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
@@ -110,117 +129,48 @@
         >保存</el-button>
       </div>
     </el-dialog>
-
-    <el-dialog
-      title="添加权限"
-      :visible.sync="jurisdictionFlag"
-      width="30%"
-      destroy-on-close
-      @close="closeDialog('jurisdiction')"
-    >
-      <el-form label-width="120px" :model="editForm" ref="editForm" :rules="rules">
-        <el-form-item label="权限" prop="jurisdiction">
-          <tree-table
-            :data="hospital"
-            :defaultAuth="editForm.jurisdiction"
-            @getMenuArr="getHospitalMenuArr"
-          ></tree-table>
-        </el-form-item>
-      </el-form>
-    </el-dialog>
   </div>
 </template>
 <script>
-import treeTable from "../../common/TreeTableAuthor/index";
+import {
+  getAdmin,
+  getGroup,
+  addAdmin,
+  editAdmin,
+  delAdmin,
+  getHospital,
+  searchAdmin,
+} from "../../../network/api";
+// import treeTable from "../../common/TreeTableAuthor/index";
 export default {
   name: "role",
-  components: { treeTable },
+  components: {},
   data() {
     return {
       formInline: {
-        roleName: null,
-        roleNo: null,
+        text: '',
         tree: null,
       },
-      hospital: [
-        {
-          id: 1,
-          label: "一级 1",
-          children: [
-            {
-              id: 4,
-              label: "二级 1-1",
-              children: [
-                {
-                  id: 9,
-                  label: "三级 1-1-1",
-                  children: [
-                    {
-                      id: 11,
-                      label: "四级 1-1-1-1",
-                    },
-                  ],
-                },
-                {
-                  id: 10,
-                  label: "三级 1-1-2",
-                },
-              ],
-            },
-          ],
-        },
-        {
-          id: 2,
-          label: "一级 2",
-          children: [
-            {
-              id: 5,
-              label: "二级 2-1",
-              children: [
-                {
-                  id: 9,
-                  label: "三级 2-1-1",
-                },
-                {
-                  id: 10,
-                  label: "三级 2-1-2",
-                },
-              ],
-            },
-            {
-              id: 6,
-              label: "二级 2-2",
-            },
-          ],
-        },
-        {
-          id: 3,
-          label: "一级 3",
-          children: [
-            {
-              id: 7,
-              label: "二级 3-1",
-            },
-            {
-              id: 8,
-              label: "二级 3-2",
-            },
-          ],
-        },
-      ],
+      that: this,
+      groupList: [],
+      hospitalList: [],
       loading: false, //是显示加载
       nshow: true, //switch开启
       fshow: false, //switch关闭
       editFormVisible: false, //控制编辑页面显示与隐藏
       title: "添加",
+      defaultEdit: [], // 默认权限
       editForm: {
         //编辑表单
         roleId: "",
-        systemNo: "",
-        roleNo: "",
-        roleName: "",
-        hospital: [],
+        password: "",
+        username: "",
+        hospitalId: null,
+        mobile: "",
+        groupId: [],
+        adminId: null,
       },
+      passwordText: "请输入密码",
       // 删除
       seletedata: {
         ids: "",
@@ -231,7 +181,7 @@ export default {
       // 数据权限
       RoleRight: [],
       RoleRightProps: {
-        children: "children",
+        children: "child",
         label: "name",
       },
       // 选中
@@ -249,242 +199,282 @@ export default {
       jurisdictionFlag: false, // 权限分配弹框
       // rules 表单验证
       rules: {
-        systemNo: [
-          { required: true, message: "请输入系统编码", trigger: "blur" },
+        password: [
+          { required: false, message: "请输入角色密码", trigger: "blur" },
+          {
+            min: 6,
+            max: 18,
+            message: "长度在 6 到 18 个字符",
+            trigger: "blur",
+          },
         ],
-        roleNo: [
-          { required: true, message: "请输入角色代码", trigger: "blur" },
-        ],
-        roleName: [
+        username: [
           { required: true, message: "请输入角色名称", trigger: "blur" },
         ],
-        jurisdiction: [
+        groupId: [
           {
             type: "array",
             required: true,
             message: "请勾选权限",
-            trigger: "blur",
+            trigger: "change",
           },
         ],
-        hospital: [
-          {
-            type: "array",
-            required: true,
-            message: "请勾选权限",
-            trigger: "blur",
-          },
+        hospitalId: [
+          { required: true, message: "请选择医院", trigger: "change" },
         ],
       },
     };
   },
   created() {
-    this.getdata();
+    let text = this.formInline.text;
+    this.getdata(text);
+    this.getGroup();
+    this.getHospital();
   },
   filters: {
     // 状态框样式过滤
     status(status) {
       if (!status) return "danger";
-      if (status == 101) {
+      if (status == 100) {
         return "";
-      } else if (status == 102) {
-        return "info";
-      } else if (status == 103) {
+      } else if (status == -1) {
         return "danger";
       }
     },
     // 状态框文本过滤
     statusText(status) {
       if (!status) return "状态错误";
-      if (status == 101) {
+      if (status == 100) {
         return "正常";
-      } else if (status == 102) {
-        return "无权限";
-      } else if (status == 103) {
+      } else if (status == -1) {
         return "关闭";
       }
     },
   },
   methods: {
+    hospital(hospitalId) {
+      let hospital = "";
+      this.hospitalList.forEach((v) => {
+        if (v.id == hospitalId) {
+          hospital = v.title;
+        }
+      });
+      return hospital;
+    },
     // 所属医院选择
-    getHospitalMenuArr(e) {
-      console.log(e);
-      this.formInline.tree = e;
+    // 节点选中状态发生变化时的回调
+    // 共三个参数，依次为：传递给 data 属性的数组中该节点所对应的对象、节点本身是否被选中、节点的子树中是否有被选中的节点
+    getHospitalMenuArr(data, checked, indeterminate) {
+      // 获取当前选择的id在数组中的索引
+      const indexs = this.editForm.groupId.indexOf(data.id);
+      // 如果不存在数组中，并且数组中已经有一个id并且checked为true的时候，代表不能再次选择。
+      if (indexs < 0 && this.editForm.groupId.length === 1 && checked) {
+        // console.log("only one");
+        this.$message({
+          message: "只能选择一个！",
+          type: "error",
+          showClose: true,
+        });
+        // 设置已选择的节点为false 很重要
+        this.$refs.tree.setChecked(data, false);
+      } else if (this.editForm.groupId.length === 0 && checked) {
+        // 发现数组为空 并且是已选择
+        // 防止数组有值，首先清空，再push
+        this.editForm.groupId = [];
+        this.editForm.groupId.push(data.id);
+      } else if (
+        indexs >= 0 &&
+        this.editForm.groupId.length === 1 &&
+        !checked
+      ) {
+        // 再次直接进行赋值为空操作
+        this.editForm.groupId = [];
+      }
+    },
+    // 获取医院
+    getHospital() {
+      const userId = this.$store.state.userInfo.id;
+      getHospital({ userId })
+        .then((res) => {
+          if (res.code == 1) {
+            this.hospitalList = res.value;
+          } else {
+            this.$message({
+              type: "info",
+              message: res.message,
+            });
+          }
+        })
+        .catch((res) => {
+          this.loading = false;
+          this.$message.error("获取医院失败，请稍后再试！");
+        });
+    },
+    // 获取初始化权限
+    getGroup() {
+      const userId = this.$store.state.userInfo.id;
+      getGroup({ userId })
+        .then((res) => {
+          if (res.code == 1) {
+            this.groupList = res.value;
+          } else {
+            this.$message({
+              type: "info",
+              message: res.message,
+            });
+          }
+        })
+        .catch((res) => {
+          this.loading = false;
+          this.$message.error("获取权限，请稍后再试！");
+        });
     },
     // 搜索事件
     search() {
-      this.getdata(this.formInline);
+      const userId = this.$store.state.userInfo.id;
+      let page = this.pageparm.currentPage;
+      let size = this.pageparm.pageSize;
+      let text = this.formInline.text;
+      this.getdata(text);
     },
     handleSizeChange(val) {
-      console.log(`每页 ${val} 条`);
+      this.pageparm.pageSize = val;
+      let text = this.formInline.text;
+      this.getdata(text);
     },
     handleCurrentChange(val) {
-      console.log(`当前页: ${val}`);
+      this.pageparm.currentPage = val;
+      let text = this.formInline.text;
+      this.getdata(text);
     },
+
     // 获取角色列表
-    getdata(parameter) {
-      // 模拟数据
-      let res = {
-        code: 0,
-        msg: null,
-        count: 6,
-        data: [
-          {
-            addUser: "root",
-            editUser: "root",
-            addTime: 1519182004000,
-            editTime: 1520288426000,
-            roleId: 1,
-            systemNo: "pmd",
-            roleNo: "Administrator",
-            roleName: "超级管理员",
-            hospital: [1],
-            jurisdiction: [1, 2, 3],
-            status: 101,
-          },
-          {
-            addUser: null,
-            editUser: null,
-            addTime: 1521111376000,
-            editTime: 1520678191000,
-            roleId: 2,
-            systemNo: "order",
-            roleNo: "admin",
-            roleName: "公司管理员",
-            jurisdiction: [5, 10, 11],
-            hospital: [2],
-            status: 102,
-          },
-          {
-            addUser: null,
-            editUser: null,
-            addTime: 1520678221000,
-            editTime: 1520678221000,
-            roleId: 95,
-            systemNo: "pm",
-            roleNo: "common",
-            roleName: "普通用户",
-            jurisdiction: [5, 13, 12],
-            hospital: [2],
-            status: 103,
-          },
-          {
-            addUser: null,
-            editUser: null,
-            addTime: 1526349853000,
-            editTime: 1526349853000,
-            roleId: 96,
-            systemNo: "1",
-            roleNo: "1",
-            roleName: "1",
-            jurisdiction: [],
-            hospital: [],
-            status: 101,
-          },
-          {
-            addUser: null,
-            editUser: null,
-            addTime: 1526349942000,
-            editTime: 1526437443000,
-            roleId: 97,
-            systemNo: "2",
-            roleNo: "2",
-            roleName: "2",
-            hospital: [],
-            jurisdiction: [],
-            status: 101,
-          },
-          {
-            addUser: null,
-            editUser: null,
-            addTime: 1526652148000,
-            editTime: 1526652148000,
-            roleId: 101,
-            systemNo: "test",
-            roleNo: "demo",
-            roleName: "演示角色",
-            hospital: [],
-            jurisdiction: [],
-            status: 101,
-          },
-        ],
-      };
+    getdata(text) {
+      const userId = this.$store.state.userInfo.id;
+      let page = this.pageparm.currentPage;
+      let size = this.pageparm.pageSize;
       this.loading = false;
-      this.listData = res.data;
       // 分页赋值
       // this.pageparm.currentPage = this.formInline.page;
       // this.pageparm.pageSize = this.formInline.limit;
       // this.pageparm.total = res.count;
       // 模拟数据结束
-
       /***
        * 调用接口，注释上面模拟数据 取消下面注释
        */
-      // roleList(parameter)
-      //   .then(res => {
-      //     this.loading = false
-      //     if (res.success == false) {
-      //       this.$message({
-      //         type: 'info',
-      //         message: res.msg
-      //       })
-      //     } else {
-      //       this.listData = res.data
-      //       // 分页赋值
-      //       this.pageparm.currentPage = this.formInline.page
-      //       this.pageparm.pageSize = this.formInline.limit
-      //       this.pageparm.total = res.count
-      //     }
-      //   })
-      //   .catch(err => {
-      //     this.loading = false
-      //     this.$message.error('获取角色列表失败，请稍后再试！')
-      //   })
+      getAdmin({ userId, page, size, text })
+        .then((res) => {
+          this.loading = false;
+          if (res.code != 1) {
+            this.$message({
+              type: "info",
+              message: res.message,
+            });
+          } else {
+            this.listData = res.value[0];
+
+            // 分页赋值
+            this.pageparm.total = res.value[1];
+          }
+        })
+        .catch((err) => {
+          this.loading = false;
+          this.$message.error("获取角色列表失败，请稍后再试！");
+        });
     },
     //显示编辑界面
     handleEdit: function (index, row) {
       this.editFormVisible = true;
       if (row != undefined && row != "undefined") {
         this.title = "修改";
-        this.editForm.roleId = row.roleId;
-        this.editForm.systemNo = row.systemNo;
-        this.editForm.roleNo = row.roleNo;
-        this.editForm.roleName = row.roleName;
-        this.editForm.hospital = row.hospital;
+        this.editForm.roleId = row.id;
+        this.editForm.password = "";
+        this.editForm.mobile = row.mobile;
+        this.editForm.username = row.username;
+        this.editForm.hospitalId = row.hospitalId;
+        this.editForm.groupId = [row.groupId];
+        this.defaultEdit = [row.groupId];
+        this.passwordText = "请输入密码(不输入为不修改)";
       } else {
         this.title = "添加";
+        this.passwordText = "请输入密码";
         this.editForm.roleId = "";
-        this.editForm.systemNo = "";
-        this.editForm.roleNo = "";
-        this.editForm.roleName = "";
-        this.editForm.hospital = [];
+        this.editForm.password = "";
+        this.editForm.username = "";
+        this.editForm.hospitalId = "";
+        this.editForm.groupId = [];
       }
     },
     // 编辑、增加页面保存方法
     submitForm(editData) {
+      let text = this.formInline.text;
       this.$refs[editData].validate((valid) => {
         if (valid) {
-          roleSave(this.editForm)
-            .then((res) => {
-              this.editFormVisible = false;
-              this.loading = false;
-              if (res.success) {
-                this.getdata(this.formInline);
-                this.$message({
-                  type: "success",
-                  message: "角色保存成功！",
-                });
-              } else {
-                this.$message({
-                  type: "info",
-                  message: res.msg,
-                });
-              }
+          const userId = this.$store.state.userInfo.id;
+          if (this.title == "修改") {
+            editAdmin({
+              groupId: this.editForm.groupId[0],
+              userId,
+              adminId: this.editForm.roleId,
+              hospitalId: this.editForm.hospitalId,
+              password: this.editForm.password,
+              username: this.editForm.username,
+              mobile: this.editForm.mobile,
             })
-            .catch((err) => {
-              this.editFormVisible = false;
-              this.loading = false;
-              this.$message.error("角色保存失败，请稍后再试！");
-            });
+              .then((res) => {
+                this.editFormVisible = false;
+                this.loading = false;
+                if (res.code == 1) {
+                  this.getdata(text);
+                  this.$message({
+                    type: "success",
+                    message: "角色保存成功！",
+                  });
+                } else {
+                  this.$message({
+                    type: "info",
+                    message: res.message,
+                  });
+                }
+              })
+              .catch((err) => {
+                this.editFormVisible = false;
+                this.loading = false;
+                this.$message.error("角色保存失败，请稍后再试！");
+              });
+          } else {
+            addAdmin({
+              groupId: this.editForm.groupId[0],
+              userId,
+              hospitalId: this.editForm.hospitalId,
+              password: this.editForm.password,
+              username: this.editForm.username,
+              mobile: this.editForm.mobile,
+            })
+              .then((res) => {
+                this.editFormVisible = false;
+                this.loading = false;
+                if (res.code == 1) {
+                  this.getdata(text);
+                  this.$message({
+                    showClose: true,
+                    message: "添加成功, 账号为:" + res.value.id + ' 请妥善保管！',
+                    type: "success",
+                    duration: 0,
+                  });
+                } else {
+                  this.$message({
+                    type: "info",
+                    message: res.message,
+                  });
+                }
+              })
+              .catch((err) => {
+                this.editFormVisible = false;
+                this.loading = false;
+                this.$message.error("角色保存失败，请稍后再试！");
+              });
+          }
         } else {
           return false;
         }
@@ -492,20 +482,22 @@ export default {
     },
     // 删除角色
     deleteUser(index, row) {
+      const userId = this.$store.state.userInfo.id;
+      let text = this.formInline.text;
       this.$confirm("确定要删除吗?", "信息", {
         confirmButtonText: "确定",
         cancelButtonText: "取消",
         type: "warning",
       })
         .then(() => {
-          roleDelete(row.roleId)
+          delAdmin({ adminId: row.id, userId })
             .then((res) => {
-              if (res.success) {
+              if (res.code == 1) {
                 this.$message({
                   type: "success",
                   message: "角色已删除！",
                 });
-                this.getdata(this.formInline);
+                this.getdata(text);
               } else {
                 this.$message({
                   type: "info",
@@ -526,40 +518,40 @@ export default {
         });
     },
     //批量删除
-    handleDel() {
-      this.$confirm("确定要删除吗?", "信息", {
-        confirmButtonText: "确定",
-        cancelButtonText: "取消",
-        type: "warning",
-      })
-        .then(() => {
-          roleDelete(row.roleId)
-            // .then((res) => {
-            //   if (res.success) {
-            //     this.$message({
-            //       type: "success",
-            //       message: "角色已删除！",
-            //     });
-            //     this.getdata(this.formInline);
-            //   } else {
-            //     this.$message({
-            //       type: "info",
-            //       message: res.msg,
-            //     });
-            //   }
-            // })
-            .catch((err) => {
-              this.loading = false;
-              this.$message.error("角色删除失败，请稍后再试！");
-            });
-        })
-        .catch(() => {
-          this.$message({
-            type: "info",
-            message: "已取消删除",
-          });
-        });
-    },
+    // handleDel() {
+    //   this.$confirm("确定要删除吗?", "信息", {
+    //     confirmButtonText: "确定",
+    //     cancelButtonText: "取消",
+    //     type: "warning",
+    //   })
+    //     .then(() => {
+    //       roleDelete(row.roleId)
+    //         // .then((res) => {
+    //         //   if (res.success) {
+    //         //     this.$message({
+    //         //       type: "success",
+    //         //       message: "角色已删除！",
+    //         //     });
+    //         //     this.getdata(this.formInline);
+    //         //   } else {
+    //         //     this.$message({
+    //         //       type: "info",
+    //         //       message: res.msg,
+    //         //     });
+    //         //   }
+    //         // })
+    //         .catch((err) => {
+    //           this.loading = false;
+    //           this.$message.error("角色删除失败，请稍后再试！");
+    //         });
+    //     })
+    //     .catch(() => {
+    //       this.$message({
+    //         type: "info",
+    //         message: "已取消删除",
+    //       });
+    //     });
+    // },
     // 数据权限
     menuAccess: function (index, row) {
       this.jurisdictionFlag = true;
@@ -585,6 +577,7 @@ export default {
       //     this.$message.error("获取权限失败，请稍后再试！");
       //   });
     },
+
     // 选中菜单
     changemenu(val) {
       let change = [];
@@ -635,58 +628,24 @@ export default {
       items = null;
       return tree;
     },
-    // 菜单权限-保存
-    menuPermSave() {
-      let parm = {
-        roleId: this.saveroleId,
-        moduleIds: "",
-      };
-      let node = this.$refs.tree.getCheckedNodes();
-      let moduleIds = [];
-      if (node.length != 0) {
-        for (let i = 0; i < node.length; i++) {
-          moduleIds.push(node[i].id);
-        }
-        parm.moduleIds = JSON.stringify(moduleIds);
-      }
-      RoleRightSave(parm)
-        .then((res) => {
-          if (res.success) {
-            this.$message({
-              type: "success",
-              message: "权限保存成功",
-            });
-            this.menuAccessshow = false;
-            this.getdata(this.formInline);
-          } else {
-            this.$message({
-              type: "info",
-              message: res.msg,
-            });
-          }
-        })
-        .catch((err) => {
-          this.loading = false;
-          this.$message.error("权限保存失败，请稍后再试！");
-        });
-    },
+  
     // 关闭编辑、增加弹出框
     closeDialog(dialog) {
       if (dialog == "edit") {
+        this.editForm.groupId = [];
         this.editFormVisible = false;
       } else if (dialog == "perm") {
         this.menuAccessshow = false;
       } else if (dialog == "jurisdiction") {
         this.jurisdictionFlag = false;
       }
-      this.editForm.hospital = [];
-      this.editForm.jurisdiction = [];
+      // this.editForm.jurisdiction = [];
     },
   },
   computed: {
-    delFlag() {
-      return this.checkmenu.length > 0 ? false : true;
-    },
+    // delFlag() {
+    //   return this.checkmenu.length > 0 ? false : true;
+    // },
   },
 };
 </script>
